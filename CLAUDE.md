@@ -28,9 +28,9 @@ Every skill that dispatches a subagent says to start it with a fresh context win
 
 ## Branching
 
-`main` mirrors the upstream repository, [mattpocock/skills](https://github.com/mattpocock/skills). Do not commit or merge into it directly; use it only to sync with upstream.
+`main` mirrors the `main` branch of the upstream repository, [mattpocock/skills](https://github.com/mattpocock/skills). The `upstream` remote is `https://github.com/mattpocock/skills.git` and fetches only that branch. Do not commit or merge into `main` directly; sync it while on `main` with `git fetch upstream` and `git merge --ff-only upstream/main`.
 
-`dev` is this fork's main branch for secondary development. All feature work merges into `dev`, never into `main`.
+`dev` is this fork's main branch for secondary development. All feature work merges into `dev`, never into `main`. After syncing `main`, merge it into `dev` to pick up upstream changes.
 
 Feature work happens on `fea/<name>` branches cut from `dev`. Merge each completed feature back into `dev`.
 
