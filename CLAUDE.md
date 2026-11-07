@@ -36,6 +36,10 @@ Feature work happens on `fea/<name>` branches cut from `dev`. Merge each complet
 
 ## Agent skills
 
+### Issue tracker
+
+GitHub Issues in `Tften/skills`. See `docs/agents/issue-tracker.md`.
+
 ### Triage labels
 
 Canonical names, unchanged. See `docs/agents/triage-labels.md`. Issues are judged against [`SCOPE.md`](./SCOPE.md).
