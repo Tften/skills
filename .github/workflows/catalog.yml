@@ -2,7 +2,7 @@ name: Sync upstream and publish skill catalog
 
 on:
   schedule:
-    - cron: "41 * * * *"
+    - cron: "0 22 * * *" # 每天北京时间 06:00（UTC 22:00），调度器自愈后由它接管
   workflow_dispatch:
   push:
     branches:
