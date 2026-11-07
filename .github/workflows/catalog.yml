@@ -2,7 +2,7 @@ name: Sync upstream and publish skill catalog
 
 on:
   schedule:
-    - cron: "23 * * * *"
+    - cron: "41 * * * *"
   workflow_dispatch:
   push:
     branches:
