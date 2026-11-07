@@ -306,6 +306,14 @@ test("fails when the plugin manifest has no skills array", (t) => {
   assertBuildFails(t, root, /"skills" array/);
 });
 
+test("fails when the plugin manifest is null", (t) => {
+  const root = tempDir(t, "catalog-repo-");
+  mkdirSync(join(root, ".claude-plugin"), { recursive: true });
+  writeFileSync(join(root, ".claude-plugin", "plugin.json"), "null");
+
+  assertBuildFails(t, root, /"skills" array/);
+});
+
 test("fails when a manifest entry escapes the repository root", (t) => {
   const root = tempDir(t, "catalog-repo-");
   writeManifest(root, ["../outside"]);
@@ -447,12 +455,15 @@ test("fails when a manifest entry is not a string", (t) => {
   assertBuildFails(t, root, /must be a non-empty string/);
 });
 
-test("fails on uppercase skill IDs", (t) => {
+test("accepts skill IDs that are safe but not lowercase kebab-case", (t) => {
   const root = tempDir(t, "catalog-repo-");
   writeSkill(root, "skills/Uppercase");
   writeManifest(root, ["./skills/Uppercase"]);
+  const outDir = tempDir(t, "catalog-out-");
 
-  assertBuildFails(t, root, /lowercase kebab-case/);
+  const index = buildCatalog({ repoRoot: root, outDir });
+
+  assert.deepEqual(index.skills.map((skill) => skill.name), ["Uppercase"]);
 });
 
 test("fails on percent-encoded traversal in packaged file paths", (t) => {
