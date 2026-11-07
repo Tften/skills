@@ -16,8 +16,6 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "nod
 import { fileURLToPath } from "node:url";
 
 const MANIFEST_SEGMENTS = [".claude-plugin", "plugin.json"];
-const SKILL_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const MAX_SKILL_ID_LENGTH = 64;
 
 const USAGE = `Usage: node scripts/build-catalog.mjs [options]
 
@@ -26,7 +24,8 @@ plugin manifest.
 
 Options:
   --root <dir>  Repository root (default: current directory)
-  --out <dir>   Output directory (default: <root>/dist/catalog)
+  --out <dir>   Output directory, relative to the current directory
+                (default: <root>/dist/catalog)
   --help, -h    Show this help message`;
 
 class CatalogError extends Error {}
@@ -50,18 +49,18 @@ function isSameOrInside(parent, child) {
 function assertSafeSkillId(name, entry, manifestPath) {
   if (
     name.length === 0 ||
-    name.length > MAX_SKILL_ID_LENGTH ||
+    name === "." ||
+    name === ".." ||
     name.includes("/") ||
     name.includes("\\") ||
     name.includes("\0") ||
     name.includes("?") ||
     name.includes("#") ||
     isAbsolute(name) ||
-    URL_LIKE.test(name) ||
-    !SKILL_ID_PATTERN.test(name)
+    URL_LIKE.test(name)
   ) {
     fail(
-      `The manifest entry "${entry}" in ${manifestPath} has an unsafe skill ID "${name}". Skill IDs must be lowercase kebab-case, 1-64 characters, with no "/", "\\", "?", "#", or URL syntax.`,
+      `The manifest entry "${entry}" in ${manifestPath} has an unsafe skill ID "${name}". Skill IDs must be a single path segment with no "/", "\\", "?", "#", or URL syntax.`,
     );
   }
 }
@@ -162,7 +161,11 @@ function readManifest(repoRoot) {
     fail(`The plugin manifest at ${manifestPath} is not valid JSON: ${error.message}`);
   }
 
-  if (!Array.isArray(manifest.skills)) {
+  if (
+    manifest === null ||
+    typeof manifest !== "object" ||
+    !Array.isArray(manifest.skills)
+  ) {
     fail(`The plugin manifest at ${manifestPath} must contain a "skills" array.`);
   }
 
