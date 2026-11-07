@@ -1,0 +1,46 @@
+# 基础：文本文件入库与检出统一 LF
+# 注意：同一属性后匹配覆盖先匹配，例外规则必须放在本行之后
+* text=auto eol=lf
+
+# Windows 批处理：cmd.exe 对 LF 兼容性差，检出保持 CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 常见二进制：禁止换行转换、文本 diff 和自动合并
+# binary = -diff -merge -text
+# 不要给 .svg / .pem / .crt / .key / .eps 等文本格式加 binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.bmp binary
+*.psd binary
+*.pdf binary
+*.zip binary
+*.tar binary
+*.gz binary
+*.tgz binary
+*.7z binary
+*.rar binary
+*.jar binary
+*.war binary
+*.class binary
+*.exe binary
+*.dll binary
+*.so binary
+*.dylib binary
+*.wasm binary
+*.sqlite binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.mp3 binary
+*.mp4 binary
+*.mov binary
+*.webm binary
+*.docx binary
+*.xlsx binary
+*.pptx binary
