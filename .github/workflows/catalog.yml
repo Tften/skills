@@ -1,0 +1,88 @@
+name: Sync upstream and publish skill catalog
+
+on:
+  schedule:
+    - cron: "23 * * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - dev
+
+permissions: {}
+
+concurrency:
+  group: sync-and-publish-skill-catalog
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Sync and publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout dev
+        uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Sync upstream main
+        run: |
+          set -euo pipefail
+
+          git remote add upstream https://github.com/mattpocock/skills.git 2>/dev/null \
+            || git remote set-url upstream https://github.com/mattpocock/skills.git
+          git fetch --no-tags upstream +refs/heads/main:refs/remotes/upstream/main
+          git fetch --no-tags origin \
+            +refs/heads/main:refs/remotes/origin/main \
+            +refs/heads/dev:refs/remotes/origin/dev
+
+          git checkout -B main origin/main
+          git merge --ff-only upstream/main
+          git push origin main
+
+          git checkout dev
+          if git merge-base --is-ancestor main dev; then
+            echo "dev already contains upstream main"
+          else
+            if ! git merge --no-ff main -m "chore: 同步上游 main 到 dev"; then
+              git merge --abort || true
+              echo "::error::main cannot be merged into dev without conflicts. Resolve them manually."
+              exit 1
+            fi
+            git push origin dev
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build catalog
+        run: node scripts/build-catalog.mjs --out dist/catalog
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/catalog
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

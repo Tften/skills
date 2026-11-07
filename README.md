@@ -106,6 +106,44 @@ In your agent, run it once per repo. It will:
 
 ### 3. Bam - you're ready to go.
 
+## OpenCode catalog (this fork)
+
+This fork publishes the promoted skills as an OpenCode HTTP catalog. The catalog is built from `dev` and deployed to GitHub Pages after every change to `dev`.
+
+Base URL: `https://tften.github.io/skills/`
+
+Use this catalog instead of the `npx skills` install for OpenCode. Installing both gives you duplicate skill IDs.
+
+### OpenCode V2
+
+Add the catalog to the `skills` array in your global or project `opencode.json`:
+
+```json
+{
+  "skills": ["https://tften.github.io/skills/"]
+}
+```
+
+### OpenCode V1
+
+Add the catalog to `skills.urls`:
+
+```json
+{
+  "skills": {
+    "urls": ["https://tften.github.io/skills/"]
+  }
+}
+```
+
+OpenCode downloads the catalog on startup. A skill is replaced only when its catalog `version` changes. GitHub Pages can cache `index.json`, so an update may take a little longer to appear. Restart OpenCode to pick it up.
+
+OpenCode V1 ignores `disable-model-invocation`, so user-invoked skills may still be advertised to the model. OpenCode V2 honors it.
+
+The catalog contains only the promoted skills listed in the Claude Code plugin manifest. Skills in `misc/`, `in-progress/`, and `deprecated/` are excluded.
+
+Generated catalog files are build artifacts. Do not commit them to this repository. The catalog appears after the first successful workflow run.
+
 ## Why These Skills Exist
 
 I built these skills as a way to fix common failure modes I see with Claude Code, Codex, and other coding agents.
