@@ -26,6 +26,14 @@ No em-dashes anywhere in this repo's prose (`SKILL.md` files, docs, `README.md`,
 
 Every skill that dispatches a subagent says to start it with a fresh context window. Some harnesses (Codex, for one) fork the parent conversation by default, and a fork inherits the parent's context, which is what the subagent was meant to escape.
 
+## Branching
+
+`main` mirrors the upstream repository, [mattpocock/skills](https://github.com/mattpocock/skills). Do not commit or merge into it directly; use it only to sync with upstream.
+
+`dev` is this fork's main branch for secondary development. All feature work merges into `dev`, never into `main`.
+
+Feature work happens on `fea/<name>` branches cut from `dev`. Merge each completed feature back into `dev`.
+
 ## Agent skills
 
 ### Triage labels
