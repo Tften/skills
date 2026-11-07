@@ -1,0 +1,74 @@
+name: Catalog watchdog keepalive
+
+# 兜底机制：GitHub 调度器未为本仓库派发 schedule 事件（配置已全部验证正确），
+# 由本 workflow 在 GitHub 托管 runner 上自续链，保证每小时触发一次 catalog.yml：
+#
+#   触发后：立即派发 catalog.yml → 睡 1 小时 → 再派发……共 5 轮（约 5 小时）
+#   链条末尾：用 GITHUB_TOKEN 重新派发自身，开始下一个 5 小时周期
+#
+# 注意事项：
+# - 任何一次 push 到 dev 或手动 dispatch 都会重启链条（cancel-in-progress）
+# - 同仓库自派发只需 actions: write 权限，无需 PAT
+# - schedule 自愈后（运行列表出现 event=schedule）可直接删除本文件
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - dev
+
+permissions: {}
+
+concurrency:
+  group: catalog-watchdog
+  cancel-in-progress: true
+
+jobs:
+  keepalive:
+    name: Dispatch catalog every hour
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch catalog hourly, then re-arm the chain
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          dispatch_catalog() {
+            local attempt
+            for attempt in 1 2 3; do
+              if gh workflow run catalog.yml -R "$REPO"; then
+                return 0
+              fi
+              echo "dispatch failed (attempt $attempt), retrying in 30s"
+              sleep 30
+            done
+            return 1
+          }
+
+          for round in 1 2 3 4 5; do
+            echo "round $round: dispatching catalog.yml"
+            if ! dispatch_catalog; then
+              echo "::warning::round $round catalog dispatch failed; chain continues"
+            fi
+            sleep 3600
+          done
+
+          echo "re-arming watchdog"
+          rearm_ok=0
+          for attempt in 1 2 3 4 5; do
+            if gh workflow run watchdog.yml -R "$REPO"; then
+              rearm_ok=1
+              break
+            fi
+            echo "self-dispatch failed (attempt $attempt), retrying in 60s"
+            sleep 60
+          done
+          if [ "$rearm_ok" -ne 1 ]; then
+            echo "::error::watchdog self-dispatch failed after retries; chain broken until next push or manual dispatch"
+            exit 1
+          fi
