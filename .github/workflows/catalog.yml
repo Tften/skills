@@ -2,7 +2,7 @@ name: Sync upstream and publish skill catalog
 
 on:
   schedule:
-    - cron: "*/5 * * * *" # 诊断用：每 5 分钟一次，验证调度器是否登记本仓库
+    - cron: "41 * * * *"
   workflow_dispatch:
   push:
     branches:
