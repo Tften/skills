@@ -31,14 +31,27 @@ jobs:
         run: |
           set -euo pipefail
 
-          # 最近 5 次运行中存在排队或进行中的链条，即视为存活
-          active=$(gh api "repos/$REPO/actions/workflows/watchdog.yml/runs?per_page=5" \
-            --jq '[.workflow_runs[] | select(.status == "in_progress" or .status == "queued")] | length')
-          echo "alive watchdog runs (queued or in_progress): $active"
+          # 最近 5 次运行中存在排队或进行中的链条，即视为存活。
+          # 健康检查自身失败（如瞬时 502）重试 3 次后按链死处理——fail-safe：
+          # 误点火会被 cancel-in-progress 无痛接管，漏救援才是致命盲区。
+          active=""
+          for attempt in 1 2 3; do
+            if active=$(gh api "repos/$REPO/actions/workflows/watchdog.yml/runs?per_page=5" \
+              --jq '[.workflow_runs[] | select(.status == "in_progress" or .status == "queued")] | length' 2>/dev/null); then
+              break
+            fi
+            echo "health check failed (attempt $attempt), retrying in 30s"
+            active=""
+            sleep 30
+          done
 
-          if [ "$active" -gt 0 ]; then
+          if [ -n "$active" ] && [ "$active" -gt 0 ]; then
             echo "chain alive — nothing to do"
             exit 0
+          fi
+
+          if [ -z "$active" ]; then
+            echo "::warning::health check failed after retries; assuming chain dead and re-arming (fail-safe)"
           fi
 
           echo "chain dead — re-arming watchdog and dispatching catch-up catalog run"
