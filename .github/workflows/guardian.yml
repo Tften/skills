@@ -1,0 +1,46 @@
+name: Watchdog guardian
+
+# 救护车机制：watchdog 链条的唯一致命弱点，是某一跳意外死亡（如平台事故回收
+# runner，见 2026-11-11 事故）后无人复活，自动化静默停摆。本 workflow 每天
+# 4 次巡检链条健康度：
+#
+#   - 链条存活：立即退出，无任何副作用（不产生重复触发）
+#   - 链条死亡：重新点火 watchdog，并立即补跑一次 catalog 同步
+#
+# schedule 不准点但基本会出现，恰好适合"守链"而非"守时"。
+# 巡检时刻（北京时间）：09:30 / 15:30 / 21:30 / 03:30，故意错开 06:00 主触发。
+
+on:
+  schedule:
+    - cron: "30 1,7,13,19 * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  guard:
+    name: Re-arm watchdog chain if dead
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - name: Check chain health, resurrect and catch up if dead
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # 最近 5 次运行中存在排队或进行中的链条，即视为存活
+          active=$(gh api "repos/$REPO/actions/workflows/watchdog.yml/runs?per_page=5" \
+            --jq '[.workflow_runs[] | select(.status == "in_progress" or .status == "queued")] | length')
+          echo "alive watchdog runs (queued or in_progress): $active"
+
+          if [ "$active" -gt 0 ]; then
+            echo "chain alive — nothing to do"
+            exit 0
+          fi
+
+          echo "chain dead — re-arming watchdog and dispatching catch-up catalog run"
+          gh workflow run watchdog.yml -R "$REPO"
+          gh workflow run catalog.yml -R "$REPO"
